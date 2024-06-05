@@ -2,7 +2,6 @@ package com.robbies.ucokchat
 
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,22 +12,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +30,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
+import com.robbies.ucokchat.data.GroupChar
+import com.robbies.ucokchat.data.getAllGroupList
 import com.robbies.ucokchat.floatingactionbutton.FabIcon
 import com.robbies.ucokchat.floatingactionbutton.FabOption
 import com.robbies.ucokchat.floatingactionbutton.MultiFabItem
@@ -47,19 +41,19 @@ import com.robbies.ucokchat.floatingactionbutton.MultiFloatingActionButton
 
 @Preview
 @Composable
-fun HomepageDemo(){
-    Homepage()
+fun HomeScreenDemo(){
+    HomeScreen(navController = rememberNavController())
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
-fun Homepage() {
+fun HomeScreen(navController: NavHostController) {
     val groupList = getAllGroupList()
     Scaffold(
         topBar = {
             TopAppBar(
                 colors = topAppBarColors(
-                    containerColor = colorResource(id = R.color.aqua)
+                    containerColor  = colorResource(id = R.color.aqua)
                 ),
                 title = {
                     Text(
@@ -101,7 +95,7 @@ fun Homepage() {
                 .padding(innerPadding),
             content = {
                 itemsIndexed(groupList, itemContent = { _, item ->
-                    GroupItem(item = item)
+                    GroupItem(item = item, navController = navController)
                 })
             }
         )
@@ -109,7 +103,7 @@ fun Homepage() {
 }
 
 @Composable
-fun GroupItem(item : GroupChar) {
+fun GroupItem(item : GroupChar, navController: NavHostController) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -136,51 +130,28 @@ fun GroupItem(item : GroupChar) {
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 ),
-                onClick = {},
+                onClick = {
+                    navController.navigate("chat/${item.groupName}/${item.groupImage}")
+                },
             )
             ClickableText(
                 text = item.lastChat,
                 style = TextStyle(
                     fontSize = 16.sp,
                 ),
-                onClick = {},
+                onClick = {
+                    navController.navigate("chat/${item.groupName}/${item.groupImage}")
+                },
             )
         }
     }
-}
-
-@Composable
-fun BubbleButton() {
-    var isClicked by remember { mutableStateOf(false) }
-
-    Box(
-        modifier = Modifier
-            .padding(10.dp)
-    ) {
-        FloatingActionButton(
-            onClick = { isClicked = !isClicked },
-            containerColor = colorResource(id = R.color.aqua),
-            contentColor = Color.White,
-            shape = CircleShape,
-            modifier = Modifier.align(Alignment.Center),
-        ) {
-            Icon(if (isClicked) Icons.Filled.Close else Icons.Filled.Add, "Floating action button.")
-        }
-
-        if (isClicked) {
-            Column {
-                SmallFloatingActionButton(
-                    onClick = { /* Handle first button click */ },
-                ) {
-                    Text("1")
-                }
-
-                SmallFloatingActionButton(
-                    onClick = { /* Handle second button click */ },
-                ) {
-                    Text("2")
-                }
-            }
-        }
-    }
+    Divider(
+        color = Color.LightGray,
+        thickness = 1.dp,
+        modifier = Modifier.padding(
+            top = 8.dp,
+            start = 16.dp,
+            end = 16.dp
+        )
+    )
 }

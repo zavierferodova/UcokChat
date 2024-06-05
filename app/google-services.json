@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "503811867072",
+    "project_id": "ucokchat-b0042",
+    "storage_bucket": "ucokchat-b0042.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:503811867072:android:9bb6a26e5f983cdd84c825",
+        "android_client_info": {
+          "package_name": "com.robbies.ucokchat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJakIzd5seeEBKxp7K8zvTPKLuIqZ2dbs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

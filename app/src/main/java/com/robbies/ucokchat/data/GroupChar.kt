@@ -1,7 +1,8 @@
-package com.robbies.ucokchat
+package com.robbies.ucokchat.data
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
+import com.robbies.ucokchat.R
 
 data class GroupChar(
     var groupImage: Int,

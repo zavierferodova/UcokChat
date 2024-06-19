@@ -3,22 +3,34 @@ package com.robbies.ucokchat.ui.screen
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Divider
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,15 +42,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.robbies.ucokchat.R
-import com.robbies.ucokchat.data.GroupChar
-import com.robbies.ucokchat.data.getAllGroupList
+import com.robbies.ucokchat.model.GroupChar
+import com.robbies.ucokchat.model.getAllGroupList
 import com.robbies.ucokchat.ui.component.fab.FabIcon
 import com.robbies.ucokchat.ui.component.fab.FabOption
 import com.robbies.ucokchat.ui.component.fab.MultiFabItem
 import com.robbies.ucokchat.ui.component.fab.MultiFloatingActionButton
+import org.koin.androidx.compose.koinViewModel
 
 @Preview
 @Composable
@@ -48,7 +62,10 @@ fun HomeScreenDemo() {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
-fun HomeScreen(navController: NavHostController) {
+fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = koinViewModel()) {
+    var showDialogCreateGroup by remember {
+        mutableStateOf(false)
+    }
     val groupList = getAllGroupList()
 
     Scaffold(
@@ -82,7 +99,11 @@ fun HomeScreen(navController: NavHostController) {
                 ),
                 fabIcon = FabIcon(iconRes = R.drawable.baseline_add_24, iconRotate = 45f),
                 onFabItemClicked = {
-
+                    if (it.id == 1) {
+                        showDialogCreateGroup = true
+                    } else {
+                        // Join group
+                    }
                 },
                 fabOption = FabOption(
                     iconTint = Color.White,
@@ -102,6 +123,16 @@ fun HomeScreen(navController: NavHostController) {
                     })
             }
         )
+
+        if (showDialogCreateGroup) {
+            DialogCreateGroup(
+                onDismissRequest = {
+                    showDialogCreateGroup = false
+                },
+                onConfirmation = {
+                    // pass
+                })
+        }
     }
 }
 
@@ -147,8 +178,72 @@ fun GroupItem(item: GroupChar, navController: NavHostController) {
             )
         }
     }
-    Divider(
-        color = Color.LightGray,
+    HorizontalDivider(
         thickness = 1.dp,
+        color = Color.LightGray
     )
+}
+
+@Composable
+fun DialogCreateGroup(
+    onDismissRequest: () -> Unit,
+    onConfirmation: (groupName: String) -> Unit,
+) {
+    var groupName by remember {
+        mutableStateOf("")
+    }
+    var isGroupNameError by remember {
+        mutableStateOf(false)
+    }
+
+    val callConfirmation = {
+        if (groupName.isEmpty()) {
+            isGroupNameError = true
+        } else {
+            onConfirmation(groupName)
+            onDismissRequest()
+        }
+    }
+
+    Dialog(onDismissRequest = onDismissRequest) {
+        Surface(
+            color = Color.White,
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Column(Modifier.padding(15.dp)) {
+                Text(
+                    text = "Create a Group Chat",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+                Spacer(modifier = Modifier.height(25.dp))
+                OutlinedTextField(
+                    value = groupName,
+                    isError = isGroupNameError,
+                    supportingText = {
+                        if (isGroupNameError) {
+                            Text(text = "Group name cannot empty")
+                        }
+                    },
+                    onValueChange = {
+                        groupName = it
+                    },
+                    label = {
+                        Text(text = "Group Name")
+                    })
+                Spacer(modifier = Modifier.height(20.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismissRequest) {
+                        Text(text = "Cancel")
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    TextButton(onClick = {
+                        callConfirmation()
+                    }) {
+                        Text(text = "Ok")
+                    }
+                }
+            }
+        }
+    }
 }

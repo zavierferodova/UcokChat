@@ -1,4 +1,4 @@
-package com.robbies.ucokchat.data
+package com.robbies.ucokchat.model
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString

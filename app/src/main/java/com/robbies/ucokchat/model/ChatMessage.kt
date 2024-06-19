@@ -1,4 +1,4 @@
-package com.robbies.ucokchat.data
+package com.robbies.ucokchat.model
 
 data class ChatMessage(
     val sender: String,

@@ -46,7 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.robbies.ucokchat.R
-import com.robbies.ucokchat.data.ChatMessage
+import com.robbies.ucokchat.model.ChatMessage
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Preview

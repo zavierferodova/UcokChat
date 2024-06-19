@@ -1,4 +1,4 @@
-package com.robbies.ucokchat.floatingactionbutton
+package com.robbies.ucokchat.ui.component.fab
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf

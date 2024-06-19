@@ -1,4 +1,4 @@
-package com.robbies.ucokchat.floatingactionbutton
+package com.robbies.ucokchat.ui.component.fab
 
 import android.annotation.SuppressLint
 import androidx.compose.material3.contentColorFor

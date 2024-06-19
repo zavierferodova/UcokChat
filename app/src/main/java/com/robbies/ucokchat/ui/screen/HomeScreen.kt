@@ -1,7 +1,8 @@
-package com.robbies.ucokchat
+package com.robbies.ucokchat.ui.screen
 
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
@@ -32,16 +32,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import com.robbies.ucokchat.R
 import com.robbies.ucokchat.data.GroupChar
 import com.robbies.ucokchat.data.getAllGroupList
-import com.robbies.ucokchat.floatingactionbutton.FabIcon
-import com.robbies.ucokchat.floatingactionbutton.FabOption
-import com.robbies.ucokchat.floatingactionbutton.MultiFabItem
-import com.robbies.ucokchat.floatingactionbutton.MultiFloatingActionButton
+import com.robbies.ucokchat.ui.component.fab.FabIcon
+import com.robbies.ucokchat.ui.component.fab.FabOption
+import com.robbies.ucokchat.ui.component.fab.MultiFabItem
+import com.robbies.ucokchat.ui.component.fab.MultiFloatingActionButton
 
 @Preview
 @Composable
-fun HomeScreenDemo(){
+fun HomeScreenDemo() {
     HomeScreen(navController = rememberNavController())
 }
 
@@ -49,15 +50,16 @@ fun HomeScreenDemo(){
 @Composable
 fun HomeScreen(navController: NavHostController) {
     val groupList = getAllGroupList()
+
     Scaffold(
         topBar = {
             TopAppBar(
                 colors = topAppBarColors(
-                    containerColor  = colorResource(id = R.color.aqua)
+                    containerColor = colorResource(id = R.color.aqua)
                 ),
                 title = {
                     Text(
-                        text = "UcokChat",
+                        text = "Ucok Chat",
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -94,64 +96,59 @@ fun HomeScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .padding(innerPadding),
             content = {
-                itemsIndexed(groupList, itemContent = { _, item ->
-                    GroupItem(item = item, navController = navController)
-                })
+                itemsIndexed(groupList,
+                    itemContent = { _, item ->
+                        GroupItem(item = item, navController = navController)
+                    })
             }
         )
     }
 }
 
 @Composable
-fun GroupItem(item : GroupChar, navController: NavHostController) {
+fun GroupItem(item: GroupChar, navController: NavHostController) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable {
+                navController.navigate("chat/${item.groupName}/${item.groupImage}")
+            }
             .padding(15.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Image(painter = painterResource(id = item.groupImage),
+        Image(
+            painter = painterResource(id = item.groupImage),
             contentDescription = item.groupName.toString(),
             modifier = Modifier
                 .clip(CircleShape)
-                .size(48.dp)
-            )
+                .size(45.dp)
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    start = 16.dp,
+                    start = 12.dp,
                 ),
             horizontalAlignment = Alignment.Start
         ) {
-            ClickableText(
+            Text(
                 text = item.groupName,
                 style = TextStyle(
-                    fontSize = 20.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 ),
-                onClick = {
-                    navController.navigate("chat/${item.groupName}/${item.groupImage}")
-                },
             )
-            ClickableText(
+            Text(
                 text = item.lastChat,
                 style = TextStyle(
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
+                    color = Color.Gray
                 ),
-                onClick = {
-                    navController.navigate("chat/${item.groupName}/${item.groupImage}")
-                },
             )
         }
     }
     Divider(
         color = Color.LightGray,
         thickness = 1.dp,
-        modifier = Modifier.padding(
-            top = 8.dp,
-            start = 16.dp,
-            end = 16.dp
-        )
     )
 }

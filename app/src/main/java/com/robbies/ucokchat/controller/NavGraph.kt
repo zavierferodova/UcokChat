@@ -9,8 +9,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.robbies.ucokchat.ChatScreen
-import com.robbies.ucokchat.HomeScreen
+import com.robbies.ucokchat.ui.screen.ChatScreen
+import com.robbies.ucokchat.ui.screen.HomeScreen
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable

@@ -1,4 +1,4 @@
-package com.robbies.ucokchat.ui.screen
+package com.robbies.ucokchat.ui.screen.home
 
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.Image
@@ -27,6 +27,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +49,7 @@ import androidx.navigation.compose.rememberNavController
 import com.robbies.ucokchat.R
 import com.robbies.ucokchat.model.GroupChar
 import com.robbies.ucokchat.model.getAllGroupList
+import com.robbies.ucokchat.ui.component.DialogLoading
 import com.robbies.ucokchat.ui.component.fab.FabIcon
 import com.robbies.ucokchat.ui.component.fab.FabOption
 import com.robbies.ucokchat.ui.component.fab.MultiFabItem
@@ -63,9 +65,7 @@ fun HomeScreenDemo() {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = koinViewModel()) {
-    var showDialogCreateGroup by remember {
-        mutableStateOf(false)
-    }
+    val uiState by viewModel.uiState.collectAsState()
     val groupList = getAllGroupList()
 
     Scaffold(
@@ -100,7 +100,7 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = koin
                 fabIcon = FabIcon(iconRes = R.drawable.baseline_add_24, iconRotate = 45f),
                 onFabItemClicked = {
                     if (it.id == 1) {
-                        showDialogCreateGroup = true
+                        viewModel.openDialogCreateGroup()
                     } else {
                         // Join group
                     }
@@ -124,15 +124,21 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = koin
             }
         )
 
-        if (showDialogCreateGroup) {
-            DialogCreateGroup(
-                onDismissRequest = {
-                    showDialogCreateGroup = false
-                },
-                onConfirmation = {
-                    // pass
-                })
-        }
+        DialogLoading(
+            open = uiState.showDialogLoading,
+            title = uiState.dialogLoadingTitle,
+            message = uiState.dialogLoadingMessage
+        )
+
+        DialogCreateGroup(
+            open = uiState.showDialogCreateGroup,
+            onDismissRequest = {
+                viewModel.closeDialogCreateGroup()
+            },
+            onConfirmation = { groupName, username ->
+                viewModel.createGroupChat(groupName, username)
+            }
+        )
     }
 }
 
@@ -186,8 +192,9 @@ fun GroupItem(item: GroupChar, navController: NavHostController) {
 
 @Composable
 fun DialogCreateGroup(
+    open: Boolean,
     onDismissRequest: () -> Unit,
-    onConfirmation: (groupName: String) -> Unit,
+    onConfirmation: (groupName: String, username: String) -> Unit,
 ) {
     var groupName by remember {
         mutableStateOf("")
@@ -195,52 +202,76 @@ fun DialogCreateGroup(
     var isGroupNameError by remember {
         mutableStateOf(false)
     }
+    var username by remember {
+        mutableStateOf("")
+    }
+    var isUsernameError by remember {
+        mutableStateOf(false)
+    }
 
     val callConfirmation = {
         if (groupName.isEmpty()) {
             isGroupNameError = true
+        } else if (username.isEmpty()) {
+            isUsernameError = true
         } else {
-            onConfirmation(groupName)
+            onConfirmation(groupName, username)
             onDismissRequest()
         }
     }
 
-    Dialog(onDismissRequest = onDismissRequest) {
-        Surface(
-            color = Color.White,
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Column(Modifier.padding(15.dp)) {
-                Text(
-                    text = "Create a Group Chat",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                )
-                Spacer(modifier = Modifier.height(25.dp))
-                OutlinedTextField(
-                    value = groupName,
-                    isError = isGroupNameError,
-                    supportingText = {
-                        if (isGroupNameError) {
-                            Text(text = "Group name cannot empty")
+    if (open) {
+        Dialog(onDismissRequest = onDismissRequest) {
+            Surface(
+                color = Color.White,
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Column(Modifier.padding(15.dp)) {
+                    Text(
+                        text = "Create a Group Chat",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                    Spacer(modifier = Modifier.height(25.dp))
+                    OutlinedTextField(
+                        value = groupName,
+                        isError = isGroupNameError,
+                        supportingText = {
+                            if (isGroupNameError) {
+                                Text(text = "Group name cannot empty")
+                            }
+                        },
+                        onValueChange = {
+                            groupName = it
+                        },
+                        label = {
+                            Text(text = "Group Name")
+                        })
+                    OutlinedTextField(
+                        value = username,
+                        isError = isUsernameError,
+                        supportingText = {
+                            if (isUsernameError) {
+                                Text(text = "Username cannot empty")
+                            }
+                        },
+                        onValueChange = {
+                            username = it
+                        },
+                        label = {
+                            Text(text = "Username")
+                        })
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = onDismissRequest) {
+                            Text(text = "Cancel")
                         }
-                    },
-                    onValueChange = {
-                        groupName = it
-                    },
-                    label = {
-                        Text(text = "Group Name")
-                    })
-                Spacer(modifier = Modifier.height(20.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismissRequest) {
-                        Text(text = "Cancel")
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    TextButton(onClick = {
-                        callConfirmation()
-                    }) {
-                        Text(text = "Ok")
+                        Spacer(modifier = Modifier.width(10.dp))
+                        TextButton(onClick = {
+                            callConfirmation()
+                        }) {
+                            Text(text = "Ok")
+                        }
                     }
                 }
             }

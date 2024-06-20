@@ -4,7 +4,7 @@ import com.google.firebase.Firebase
 import com.google.firebase.database.database
 import com.robbies.ucokchat.data.FirebaseRepository
 import com.robbies.ucokchat.data.GroupChatRepository
-import com.robbies.ucokchat.ui.screen.HomeViewModel
+import com.robbies.ucokchat.ui.screen.home.HomeViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module

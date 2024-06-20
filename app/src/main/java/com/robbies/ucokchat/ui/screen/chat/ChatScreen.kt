@@ -1,4 +1,4 @@
-package com.robbies.ucokchat.ui.screen
+package com.robbies.ucokchat.ui.screen.chat
 
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -123,7 +123,7 @@ fun ChatScreen(groupName: String, groupImage: Int) {
                         )
                         if (currentMessage.text.isEmpty())
                             Text(
-                                "Ketik pesan",
+                                "Write a message",
                                 color = Color.DarkGray,
                                 fontSize = 16.sp,
                                 modifier = Modifier.padding(start = 15.dp),

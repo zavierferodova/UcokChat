@@ -7,6 +7,8 @@ import com.google.firebase.database.getValue
 import com.robbies.ucokchat.data.entity.SessionEntity
 import com.robbies.ucokchat.util.SecureSharedPrefs
 import com.robbies.ucokchat.util.getNowTimestampString
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.util.UUID
 
 open class FirebaseRepository(
@@ -38,6 +40,7 @@ open class FirebaseRepository(
     private fun getFirebaseSession(callback: RepositoryCallback<SessionEntity?>) {
         val sessionID = getSessionID()
         val reference = database.getReference("sessions")
+
         callback.onResult(Resource.Loading())
         reference.child(sessionID).get()
             .addOnSuccessListener {

@@ -4,6 +4,7 @@ import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
@@ -47,13 +49,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.robbies.ucokchat.R
-import com.robbies.ucokchat.model.GroupChar
-import com.robbies.ucokchat.model.getAllGroupList
+import com.robbies.ucokchat.model.GroupChat
 import com.robbies.ucokchat.ui.component.DialogLoading
 import com.robbies.ucokchat.ui.component.fab.FabIcon
 import com.robbies.ucokchat.ui.component.fab.FabOption
 import com.robbies.ucokchat.ui.component.fab.MultiFabItem
 import com.robbies.ucokchat.ui.component.fab.MultiFloatingActionButton
+import com.robbies.ucokchat.util.translateChatAnnouncement
 import org.koin.androidx.compose.koinViewModel
 
 @Preview
@@ -66,7 +68,7 @@ fun HomeScreenDemo() {
 @Composable
 fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = koinViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
-    val groupList = getAllGroupList()
+    val groupChats by viewModel.groupChats.collectAsState()
 
     Scaffold(
         topBar = {
@@ -112,17 +114,32 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = koin
             )
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            content = {
-                itemsIndexed(groupList,
-                    itemContent = { _, item ->
-                        GroupItem(item = item, navController = navController)
-                    })
+        if (uiState.showGroupChatLoading)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .align(Alignment.Center),
+                    color = colorResource(id = R.color.aqua)
+                )
             }
-        )
+
+        if (!uiState.showGroupChatLoading)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                content = {
+                    itemsIndexed(groupChats,
+                        itemContent = { _, item ->
+                            GroupItem(item = item, navController = navController)
+                        })
+                }
+            )
 
         DialogLoading(
             open = uiState.showDialogLoading,
@@ -143,19 +160,19 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = koin
 }
 
 @Composable
-fun GroupItem(item: GroupChar, navController: NavHostController) {
+fun GroupItem(item: GroupChat, navController: NavHostController) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                navController.navigate("chat/${item.groupName}/${item.groupImage}")
+//                navController.navigate("chat/${item.groupName}/${item.groupImage}")
             }
             .padding(15.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
-            painter = painterResource(id = item.groupImage),
-            contentDescription = item.groupName.toString(),
+            painter = painterResource(id = R.drawable.profile_picture),
+            contentDescription = item.name,
             modifier = Modifier
                 .clip(CircleShape)
                 .size(45.dp)
@@ -169,14 +186,18 @@ fun GroupItem(item: GroupChar, navController: NavHostController) {
             horizontalAlignment = Alignment.Start
         ) {
             Text(
-                text = item.groupName,
+                text = item.name,
                 style = TextStyle(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 ),
             )
             Text(
-                text = item.lastChat,
+                text = if (item.latestMessage != null)
+                    if (item.latestMessage.systemAnnouncement == true)
+                        translateChatAnnouncement(item.latestMessage.text)
+                    else item.latestMessage.text
+                else "No message",
                 style = TextStyle(
                     fontSize = 14.sp,
                     color = Color.Gray
@@ -209,6 +230,13 @@ fun DialogCreateGroup(
         mutableStateOf(false)
     }
 
+    val resetState = {
+        groupName = ""
+        isGroupNameError = false
+        username = ""
+        isUsernameError = false
+    }
+
     val callConfirmation = {
         if (groupName.isEmpty()) {
             isGroupNameError = true
@@ -217,6 +245,7 @@ fun DialogCreateGroup(
         } else {
             onConfirmation(groupName, username)
             onDismissRequest()
+            resetState()
         }
     }
 

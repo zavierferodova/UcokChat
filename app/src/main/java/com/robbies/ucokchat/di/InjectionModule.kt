@@ -1,7 +1,7 @@
 package com.robbies.ucokchat.di
 
 import com.google.firebase.Firebase
-import com.google.firebase.database.database
+import com.google.firebase.firestore.firestore
 import com.robbies.ucokchat.data.FirebaseRepository
 import com.robbies.ucokchat.data.GroupChatRepository
 import com.robbies.ucokchat.ui.screen.home.HomeViewModel
@@ -11,7 +11,7 @@ import org.koin.dsl.module
 
 val firebaseDatabaseModule = module {
     single {
-        Firebase.database
+        Firebase.firestore
     }
 }
 

@@ -1,73 +1,153 @@
 package com.robbies.ucokchat.data
 
 import android.content.Context
-import com.google.firebase.database.FirebaseDatabase
-import com.robbies.ucokchat.data.entity.GroupChatEntity
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.MetadataChanges
+import com.google.firebase.firestore.Query
+import com.robbies.ucokchat.data.entity.GroupChatDocument
 import com.robbies.ucokchat.data.entity.MemberEntity
 import com.robbies.ucokchat.data.entity.MessageEntity
+import com.robbies.ucokchat.data.entity.toMember
+import com.robbies.ucokchat.data.entity.toMessage
+import com.robbies.ucokchat.model.GroupChat
 import com.robbies.ucokchat.util.getNowTimestampString
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 class GroupChatRepository(
-    private val database: FirebaseDatabase,
+    private val database: FirebaseFirestore,
     private val context: Context
 ) : FirebaseRepository(database, context) {
-    private val reference = database.getReference("groups")
+    private val groupCollection = database.collection("groups")
+
+    private fun getMemberCollection(groupId: String) =
+        groupCollection.document(groupId).collection("members")
+
+    private fun getMessagesCollection(groupId: String) =
+        groupCollection.document(groupId).collection("messages")
+
     fun createGroupChat(groupName: String, username: String): Flow<Resource<Boolean>> = flow {
         emit(Resource.Loading())
 
-        val groupChat = GroupChatEntity(
-            name = groupName,
-            key = UUID.randomUUID().toString(),
-            createdAt = getNowTimestampString(),
-            updatedAt = getNowTimestampString()
-        )
-
-        val member = MemberEntity(
-            username = username,
-            sessionId = getSessionID(),
-            isAdmin = true,
-            isCreator = true,
-            joinedAt = getNowTimestampString()
-        )
+        val creationTimestamp = getNowTimestampString()
 
         val message = MessageEntity(
             text = "{{groupCreated}}",
             sender = "",
             systemAnnouncement = true,
-            timestamp = getNowTimestampString()
+            timestamp = creationTimestamp
+        )
+
+        val member = MemberEntity(
+            username = username,
+            isAdmin = true,
+            isCreator = true,
+            joinedAt = creationTimestamp
+        )
+
+        val groupChat = GroupChatDocument(
+            name = groupName,
+            memberIds = listOf(getSessionID()),
+            key = UUID.randomUUID().toString(),
+            lastMessageTimestamp = creationTimestamp,
+            createdAt = creationTimestamp,
+            updatedAt = creationTimestamp
         )
 
         try {
-            val groupRef = reference.push()
-            groupRef.setValue(groupChat).await()
-            groupRef.child("members").push().setValue(member).await()
-            groupRef.child("messages").push().setValue(message).await()
+            val groupDocument = groupCollection.add(groupChat).await()
+            groupDocument.collection("members").document(getSessionID()).set(member).await()
+            groupDocument.collection("messages").add(message).await()
             emit(Resource.Success(true))
         } catch (e: Exception) {
             emit(Resource.Error(e.message.toString(), exception = e))
         }
     }
 
-    fun getGroupChat(page: Int, limit: Int = 15): Flow<Resource<List<GroupChatEntity>>> = flow {
-        emit(Resource.Loading())
-        val startAt = (page - 1) * limit
-        val endAt = startAt + limit
-        val query = reference.orderByChild("createdAt").limitToFirst(endAt)
+    fun listenSessionGroupChat(): Flow<Resource<List<GroupChat>>> = callbackFlow {
+        trySend(Resource.Loading())
 
-        try {
-            val snapshot = query.get().await()
-            val dataList = snapshot.children.drop(startAt).take(limit).toList()
-            val groupChats = dataList.map {
-                it.getValue(GroupChatEntity::class.java)!!
+        val querySnapshot = groupCollection.whereArrayContains("memberIds", getSessionID())
+            .orderBy("lastMessageTimestamp", Query.Direction.DESCENDING)
+        val listenerRegistration =
+            querySnapshot.addSnapshotListener(MetadataChanges.INCLUDE) { snapshots, e ->
+                if (e != null) {
+                    return@addSnapshotListener
+                }
+
+                if (snapshots != null) {
+                    launch {
+                        try {
+                            val groupChats = mutableListOf<GroupChat>()
+
+                            val members = snapshots.documents.map {
+                                async {
+                                    val groupDoc = it
+                                    val groupId = groupDoc.id
+                                    val membersRef = getMemberCollection(groupId)
+                                    val membersSnapshot = membersRef.get()
+                                    membersSnapshot.await()
+                                }
+                            }.awaitAll()
+
+                            val latestMessages = snapshots.documents.map {
+                                async {
+                                    val groupDoc = it
+                                    val groupId = groupDoc.id
+                                    val messagesRef = getMessagesCollection(groupId)
+                                    val messageSnapshot =
+                                        messagesRef.orderBy("timestamp", Query.Direction.DESCENDING)
+                                            .limit(1)
+                                            .get().await()
+                                    messageSnapshot
+                                }
+                            }.awaitAll()
+
+                            for (i in snapshots.documents.indices) {
+                                val groupDoc = snapshots.documents[i]
+                                val groupId = groupDoc.id
+                                val groupData = groupDoc.toObject(GroupChatDocument::class.java)!!
+
+                                var groupChat = GroupChat(
+                                    id = groupId,
+                                    key = groupData.key,
+                                    name = groupData.name,
+                                    createdAt = groupData.createdAt,
+                                    updatedAt = groupData.updatedAt,
+                                )
+
+                                groupChat = groupChat.copy(
+                                    members = members[i].documents.map {
+                                        val memberData = it.toObject(MemberEntity::class.java)!!
+                                        memberData.toMember(it.id)
+                                    })
+
+                                groupChat = groupChat.copy(
+                                    latestMessage = latestMessages[i].documents[0].toObject(
+                                        MessageEntity::class.java
+                                    )!!.toMessage(latestMessages[i].documents[0].id)
+                                )
+
+                                groupChats.add(groupChat)
+                            }
+
+                            trySend(Resource.Success(groupChats))
+                        } catch (e: Exception) {
+                            trySend(Resource.Error(e.message.toString(), exception = e))
+                        }
+                    }
+                }
             }
 
-            emit(Resource.Success(groupChats))
-        } catch (e: Exception) {
-            emit(Resource.Error(e.message.toString(), exception = e))
+        awaitClose {
+            listenerRegistration.remove()
         }
     }
 }

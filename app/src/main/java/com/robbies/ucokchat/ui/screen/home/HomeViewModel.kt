@@ -1,16 +1,44 @@
 package com.robbies.ucokchat.ui.screen.home
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.robbies.ucokchat.data.GroupChatRepository
 import com.robbies.ucokchat.data.Resource
+import com.robbies.ucokchat.model.GroupChat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class HomeViewModel(private val repository: GroupChatRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUIState())
+    private val _groupChats = MutableStateFlow<List<GroupChat>>(emptyList())
     val uiState: StateFlow<HomeUIState> = _uiState
+    val groupChats: StateFlow<List<GroupChat>> = _groupChats
+
+    init {
+        viewModelScope.launch {
+            repository.listenSessionGroupChat().collect {
+                when (it) {
+                    is Resource.Success -> {
+                        showLoadingGroupChat(false)
+                        Log.d("HomeViewModel", "getSessionGroupChat: ${it.data}")
+                        Log.d("HomeViewModel", "getSessionGroupChat: success")
+                        _groupChats.value = it.data!!
+                    }
+
+                    is Resource.Loading -> {
+                        showLoadingGroupChat(true)
+                    }
+
+                    is Resource.Error -> {
+                        showLoadingGroupChat(false)
+                        Log.d("HomeViewModel", "getSessionGroupChat: ${it.message}")
+                    }
+                }
+            }
+        }
+    }
 
     fun openDialogCreateGroup() {
         viewModelScope.launch {
@@ -44,6 +72,14 @@ class HomeViewModel(private val repository: GroupChatRepository) : ViewModel() {
                 showDialogLoading = false,
                 dialogLoadingTitle = "",
                 dialogLoadingMessage = ""
+            )
+        }
+    }
+
+    private fun showLoadingGroupChat(isLoading: Boolean) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                showGroupChatLoading = isLoading
             )
         }
     }

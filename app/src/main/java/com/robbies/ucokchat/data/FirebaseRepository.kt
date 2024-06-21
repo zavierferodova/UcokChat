@@ -2,17 +2,14 @@ package com.robbies.ucokchat.data
 
 import android.annotation.SuppressLint
 import android.content.Context
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.getValue
-import com.robbies.ucokchat.data.entity.SessionEntity
+import com.google.firebase.firestore.FirebaseFirestore
+import com.robbies.ucokchat.data.entity.SessionEntityDocument
 import com.robbies.ucokchat.util.SecureSharedPrefs
 import com.robbies.ucokchat.util.getNowTimestampString
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.util.UUID
 
 open class FirebaseRepository(
-    private val database: FirebaseDatabase,
+    private val database: FirebaseFirestore,
     private val context: Context
 ) {
     private val sharedPreferences = SecureSharedPrefs.getSharedPreferences(context)
@@ -37,15 +34,15 @@ open class FirebaseRepository(
         return if (!result.isNullOrEmpty()) result else ""
     }
 
-    private fun getFirebaseSession(callback: RepositoryCallback<SessionEntity?>) {
+    private fun getFirebaseSession(callback: RepositoryCallback<SessionEntityDocument?>) {
         val sessionID = getSessionID()
-        val reference = database.getReference("sessions")
+        val collection = database.collection("sessions")
 
         callback.onResult(Resource.Loading())
-        reference.child(sessionID).get()
+        collection.document(sessionID).get()
             .addOnSuccessListener {
                 if (it.exists()) {
-                    callback.onResult(Resource.Success(it.getValue<SessionEntity>()))
+                    callback.onResult(Resource.Success(it.toObject(SessionEntityDocument::class.java)))
                 } else {
                     callback.onResult(Resource.Success(null))
                 }
@@ -58,17 +55,17 @@ open class FirebaseRepository(
     @SuppressLint("SimpleDateFormat")
     private fun createFirebaseSession() {
         val sessionID = getSessionID()
-        val reference = database.getReference("sessions")
+        val collection = database.collection("sessions")
         val timestamp = getNowTimestampString()
 
-        val session = SessionEntity(
+        val session = SessionEntityDocument(
             createdAt = timestamp,
             updatedAt = timestamp
         )
 
         getFirebaseSession(
-            object : RepositoryCallback<SessionEntity?> {
-                override fun onResult(result: Resource<SessionEntity?>) {
+            object : RepositoryCallback<SessionEntityDocument?> {
+                override fun onResult(result: Resource<SessionEntityDocument?>) {
                     when (result) {
                         is Resource.Loading -> {
                             // pass
@@ -76,7 +73,7 @@ open class FirebaseRepository(
 
                         is Resource.Success -> {
                             if (result.data == null) {
-                                reference.child(sessionID).setValue(session)
+                                collection.document(sessionID).set(session)
                             }
                         }
 

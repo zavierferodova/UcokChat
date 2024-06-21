@@ -1,14 +1,13 @@
 {
   "project_info": {
-    "project_number": "503811867072",
-    "firebase_url": "https://ucokchat-b0042-default-rtdb.asia-southeast1.firebasedatabase.app",
-    "project_id": "ucokchat-b0042",
-    "storage_bucket": "ucokchat-b0042.appspot.com"
+    "project_number": "436917306994",
+    "project_id": "uchat-88546",
+    "storage_bucket": "uchat-88546.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:503811867072:android:9bb6a26e5f983cdd84c825",
+        "mobilesdk_app_id": "1:436917306994:android:8baa4345561b65cbef64eb",
         "android_client_info": {
           "package_name": "com.robbies.ucokchat"
         }
@@ -16,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAJakIzd5seeEBKxp7K8zvTPKLuIqZ2dbs"
+          "current_key": "AIzaSyCLgDuq8DeyEai0eFwhMM0oil2gWNRa4Yg"
         }
       ],
       "services": {

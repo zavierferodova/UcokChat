@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -38,17 +39,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import com.robbies.ucokchat.R
+import com.robbies.ucokchat.controller.RouteActions
 import com.robbies.ucokchat.model.GroupChat
 import com.robbies.ucokchat.ui.component.DialogLoading
 import com.robbies.ucokchat.ui.component.fab.FabIcon
@@ -57,12 +56,6 @@ import com.robbies.ucokchat.ui.component.fab.MultiFabItem
 import com.robbies.ucokchat.ui.component.fab.MultiFloatingActionButton
 import com.robbies.ucokchat.util.translateChatAnnouncement
 import org.koin.androidx.compose.koinViewModel
-
-@Preview
-@Composable
-fun HomeScreenDemo() {
-    HomeScreen(navController = rememberNavController())
-}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -74,7 +67,7 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = koin
         topBar = {
             TopAppBar(
                 colors = topAppBarColors(
-                    containerColor = colorResource(id = R.color.aqua)
+                    containerColor = MaterialTheme.colorScheme.primary // get color from theme
                 ),
                 title = {
                     Text(
@@ -104,7 +97,7 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = koin
                     if (it.id == 1) {
                         viewModel.openDialogCreateGroup()
                     } else {
-                        // Join group
+                        navController.navigate(RouteActions.joinGroup())
                     }
                 },
                 fabOption = FabOption(
@@ -124,7 +117,7 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = koin
                     modifier = Modifier
                         .size(60.dp)
                         .align(Alignment.Center),
-                    color = colorResource(id = R.color.aqua)
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -165,7 +158,7 @@ fun GroupItem(item: GroupChat, navController: NavHostController) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-//                navController.navigate("chat/${item.groupName}/${item.groupImage}")
+                navController.navigate(RouteActions.chat(item))
             }
             .padding(15.dp),
         verticalAlignment = Alignment.CenterVertically

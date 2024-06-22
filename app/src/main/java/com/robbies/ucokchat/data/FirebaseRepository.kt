@@ -3,7 +3,7 @@ package com.robbies.ucokchat.data
 import android.annotation.SuppressLint
 import android.content.Context
 import com.google.firebase.firestore.FirebaseFirestore
-import com.robbies.ucokchat.data.entity.SessionEntityDocument
+import com.robbies.ucokchat.data.document.SessionEntityDocument
 import com.robbies.ucokchat.util.SecureSharedPrefs
 import com.robbies.ucokchat.util.getNowTimestampString
 import java.util.UUID
@@ -29,7 +29,7 @@ open class FirebaseRepository(
         createFirebaseSession()
     }
 
-    protected fun getSessionID(): String {
+    public fun getSessionID(): String {
         val result = sharedPreferences.getString(sessionPrefKey, "")
         return if (!result.isNullOrEmpty()) result else ""
     }

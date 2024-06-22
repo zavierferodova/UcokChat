@@ -1,4 +1,4 @@
-package com.robbies.ucokchat.data.entity
+package com.robbies.ucokchat.data.document
 
 import com.google.firebase.firestore.IgnoreExtraProperties
 

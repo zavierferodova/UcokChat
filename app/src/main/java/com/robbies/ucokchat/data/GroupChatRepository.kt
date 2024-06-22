@@ -4,11 +4,11 @@ import android.content.Context
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
-import com.robbies.ucokchat.data.entity.GroupChatDocument
-import com.robbies.ucokchat.data.entity.MemberEntity
-import com.robbies.ucokchat.data.entity.MessageEntity
-import com.robbies.ucokchat.data.entity.toMember
-import com.robbies.ucokchat.data.entity.toMessage
+import com.robbies.ucokchat.data.document.GroupChatDocument
+import com.robbies.ucokchat.data.document.MemberEntity
+import com.robbies.ucokchat.data.document.MessageEntity
+import com.robbies.ucokchat.data.document.toMember
+import com.robbies.ucokchat.data.document.toMessage
 import com.robbies.ucokchat.model.GroupChat
 import com.robbies.ucokchat.util.getNowTimestampString
 import kotlinx.coroutines.async
@@ -46,14 +46,14 @@ class GroupChatRepository(
         )
 
         val member = MemberEntity(
-            username = username,
+            username = username.trim(),
             isAdmin = true,
             isCreator = true,
             joinedAt = creationTimestamp
         )
 
         val groupChat = GroupChatDocument(
-            name = groupName,
+            name = groupName.trim(),
             memberIds = listOf(getSessionID()),
             key = UUID.randomUUID().toString(),
             lastMessageTimestamp = creationTimestamp,
@@ -148,6 +148,51 @@ class GroupChatRepository(
 
         awaitClose {
             listenerRegistration.remove()
+        }
+    }
+
+    fun checkGroupAvailability(keyBarcode: String): Flow<Resource<Boolean>> = flow {
+        emit(Resource.Loading())
+
+        try {
+            val querySnapshot = groupCollection.whereEqualTo("key", keyBarcode).get().await()
+            if (querySnapshot.isEmpty) {
+                emit(Resource.Success(false))
+            } else {
+                emit(Resource.Success(true))
+            }
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message.toString(), exception = e))
+        }
+    }
+
+    fun joinGroupChat(keyBarcode: String, username: String): Flow<Resource<GroupChat?>> = flow {
+        emit(Resource.Loading())
+
+        try {
+            val querySnapshot = groupCollection.whereEqualTo("key", keyBarcode).get().await()
+
+//            if (querySnapshot.isEmpty) {
+//                emit(Resource.Success(null))
+//            } else {
+//                val groupDoc = querySnapshot.documents[0]
+//                val groupId = groupDoc.id
+//
+//                val membersRef = getMemberCollection(groupId)
+//                val membersSnapshot = membersRef.get().await()
+//
+//                if (membersSnapshot.documents.any { it.id == getSessionID() }) {
+//                    emit(Resource.Success(null))
+//                } else {
+//                    val member = MemberEntity(
+//                        username = username.trim(),
+//                        isAdmin = false,
+//                        isCreator = false,
+//                        joinedAt = getNowTimestampString())
+//                }
+//            }
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message.toString(), exception = e))
         }
     }
 }

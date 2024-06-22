@@ -1,6 +1,5 @@
 package com.robbies.ucokchat.ui.screen.home
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.robbies.ucokchat.data.GroupChatRepository
@@ -22,8 +21,6 @@ class HomeViewModel(private val repository: GroupChatRepository) : ViewModel() {
                 when (it) {
                     is Resource.Success -> {
                         showLoadingGroupChat(false)
-                        Log.d("HomeViewModel", "getSessionGroupChat: ${it.data}")
-                        Log.d("HomeViewModel", "getSessionGroupChat: success")
                         _groupChats.value = it.data!!
                     }
 
@@ -33,7 +30,6 @@ class HomeViewModel(private val repository: GroupChatRepository) : ViewModel() {
 
                     is Resource.Error -> {
                         showLoadingGroupChat(false)
-                        Log.d("HomeViewModel", "getSessionGroupChat: ${it.message}")
                     }
                 }
             }

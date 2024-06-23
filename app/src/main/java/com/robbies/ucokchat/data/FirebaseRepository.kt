@@ -3,7 +3,7 @@ package com.robbies.ucokchat.data
 import android.annotation.SuppressLint
 import android.content.Context
 import com.google.firebase.firestore.FirebaseFirestore
-import com.robbies.ucokchat.data.document.SessionEntityDocument
+import com.robbies.ucokchat.data.document.SessionDocument
 import com.robbies.ucokchat.util.SecureSharedPrefs
 import com.robbies.ucokchat.util.getNowTimestampString
 import java.util.UUID
@@ -34,7 +34,7 @@ open class FirebaseRepository(
         return if (!result.isNullOrEmpty()) result else ""
     }
 
-    private fun getFirebaseSession(callback: RepositoryCallback<SessionEntityDocument?>) {
+    private fun getFirebaseSession(callback: RepositoryCallback<SessionDocument?>) {
         val sessionID = getSessionID()
         val collection = database.collection("sessions")
 
@@ -42,7 +42,7 @@ open class FirebaseRepository(
         collection.document(sessionID).get()
             .addOnSuccessListener {
                 if (it.exists()) {
-                    callback.onResult(Resource.Success(it.toObject(SessionEntityDocument::class.java)))
+                    callback.onResult(Resource.Success(it.toObject(SessionDocument::class.java)))
                 } else {
                     callback.onResult(Resource.Success(null))
                 }
@@ -58,14 +58,14 @@ open class FirebaseRepository(
         val collection = database.collection("sessions")
         val timestamp = getNowTimestampString()
 
-        val session = SessionEntityDocument(
+        val session = SessionDocument(
             createdAt = timestamp,
             updatedAt = timestamp
         )
 
         getFirebaseSession(
-            object : RepositoryCallback<SessionEntityDocument?> {
-                override fun onResult(result: Resource<SessionEntityDocument?>) {
+            object : RepositoryCallback<SessionDocument?> {
+                override fun onResult(result: Resource<SessionDocument?>) {
                     when (result) {
                         is Resource.Loading -> {
                             // pass

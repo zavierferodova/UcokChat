@@ -250,9 +250,9 @@ fun DialogCreateGroup(
             ) {
                 Column(Modifier.padding(15.dp)) {
                     Text(
-                        text = "Create a Group Chat",
+                        text = "Create Group Chat",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        fontSize = 22.sp
                     )
                     Spacer(modifier = Modifier.height(25.dp))
                     OutlinedTextField(

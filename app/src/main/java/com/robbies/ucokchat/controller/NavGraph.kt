@@ -40,7 +40,7 @@ fun NavGraph(startDestination: String = RouteNames.HOME) {
             DetailGroupScreen(groupChat)
         }
         composable(RouteNames.JOIN_GROUP) {
-            JoinGroupScreen()
+            JoinGroupScreen(navController)
         }
     }
 }

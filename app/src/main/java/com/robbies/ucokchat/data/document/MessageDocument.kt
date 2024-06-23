@@ -4,14 +4,14 @@ import com.google.firebase.firestore.IgnoreExtraProperties
 import com.robbies.ucokchat.model.Message
 
 @IgnoreExtraProperties
-data class MessageEntity(
+data class MessageDocument(
     val text: String = "",
     val sender: String = "",
     val systemAnnouncement: Boolean? = null,
     val timestamp: String = ""
 )
 
-fun MessageEntity.toMessage(id: String): Message {
+fun MessageDocument.toMessage(id: String): Message {
     return Message(
         id = id,
         text = text,

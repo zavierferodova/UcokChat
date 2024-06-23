@@ -79,7 +79,7 @@ fun ChatScreen(navController: NavController, groupChat: GroupChat) {
                         Row(
                             modifier = Modifier
                                 .height(60.dp)
-                                .weight(0.2f)
+                                .width(80.dp)
                                 .clickable {
                                     navController.popBackStack()
                                 }

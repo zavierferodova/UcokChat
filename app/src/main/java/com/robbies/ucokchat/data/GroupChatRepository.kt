@@ -1,14 +1,20 @@
 package com.robbies.ucokchat.data
 
 import android.content.Context
+import android.util.Log
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.robbies.ucokchat.data.document.GroupChatDocument
-import com.robbies.ucokchat.data.document.MemberEntity
-import com.robbies.ucokchat.data.document.MessageEntity
+import com.robbies.ucokchat.data.document.MemberDocument
+import com.robbies.ucokchat.data.document.MessageDocument
 import com.robbies.ucokchat.data.document.toMember
 import com.robbies.ucokchat.data.document.toMessage
+import com.robbies.ucokchat.data.response.GroupAvailabilityResponse
+import com.robbies.ucokchat.data.response.GroupAvailabilityStatus
+import com.robbies.ucokchat.data.response.JoinGroupResponse
+import com.robbies.ucokchat.data.response.JoinGroupStatus
 import com.robbies.ucokchat.model.GroupChat
 import com.robbies.ucokchat.util.getNowTimestampString
 import kotlinx.coroutines.async
@@ -38,14 +44,14 @@ class GroupChatRepository(
 
         val creationTimestamp = getNowTimestampString()
 
-        val message = MessageEntity(
+        val message = MessageDocument(
             text = "{{groupCreated}}",
             sender = "",
             systemAnnouncement = true,
             timestamp = creationTimestamp
         )
 
-        val member = MemberEntity(
+        val member = MemberDocument(
             username = username.trim(),
             isAdmin = true,
             isCreator = true,
@@ -105,7 +111,8 @@ class GroupChatRepository(
                                     val messageSnapshot =
                                         messagesRef.orderBy("timestamp", Query.Direction.DESCENDING)
                                             .limit(1)
-                                            .get().await()
+                                            .get()
+                                            .await()
                                     messageSnapshot
                                 }
                             }.awaitAll()
@@ -125,13 +132,13 @@ class GroupChatRepository(
 
                                 groupChat = groupChat.copy(
                                     members = members[i].documents.map {
-                                        val memberData = it.toObject(MemberEntity::class.java)!!
+                                        val memberData = it.toObject(MemberDocument::class.java)!!
                                         memberData.toMember(it.id)
                                     })
 
                                 groupChat = groupChat.copy(
                                     latestMessage = latestMessages[i].documents[0].toObject(
-                                        MessageEntity::class.java
+                                        MessageDocument::class.java
                                     )!!.toMessage(latestMessages[i].documents[0].id)
                                 )
 
@@ -151,48 +158,144 @@ class GroupChatRepository(
         }
     }
 
-    fun checkGroupAvailability(keyBarcode: String): Flow<Resource<Boolean>> = flow {
-        emit(Resource.Loading())
+    fun checkGroupAvailability(keyBarcode: String): Flow<Resource<GroupAvailabilityResponse>> =
+        flow {
+            emit(Resource.Loading())
 
-        try {
-            val querySnapshot = groupCollection.whereEqualTo("key", keyBarcode).get().await()
-            if (querySnapshot.isEmpty) {
-                emit(Resource.Success(false))
-            } else {
-                emit(Resource.Success(true))
+            try {
+                val querySnapshot = groupCollection.whereEqualTo("key", keyBarcode).get().await()
+                val data = GroupAvailabilityResponse(
+                    status = GroupAvailabilityStatus.NOT_FOUND,
+                    groupChat = null
+                )
+
+                if (querySnapshot.isEmpty) {
+                    emit(Resource.Success(data))
+                } else {
+                    val groupDoc = querySnapshot.documents[0]
+                    val groupId = groupDoc.id
+                    val groupData = groupDoc.toObject(GroupChatDocument::class.java)!!
+
+                    // Already join group
+                    if (groupData.memberIds.contains(getSessionID())) {
+                        val membersRef = getMemberCollection(groupId)
+                        val membersSnapshot = membersRef.get().await()
+
+                        val groupChat = GroupChat(
+                            id = groupId,
+                            key = groupData.key,
+                            name = groupData.name,
+                            members = membersSnapshot.documents.map {
+                                val memberDocument = it.toObject(MemberDocument::class.java)!!
+                                memberDocument.toMember(it.id)
+                            },
+                            createdAt = groupData.createdAt,
+                            updatedAt = groupData.updatedAt,
+                        )
+
+                        emit(
+                            Resource.Success(
+                                data.copy(
+                                    status = GroupAvailabilityStatus.ALREADY_JOIN,
+                                    groupChat = groupChat
+                                )
+                            )
+                        )
+                    } else {
+                        emit(
+                            Resource.Success(
+                                data.copy(
+                                    status = GroupAvailabilityStatus.AVAILABLE
+                                )
+                            )
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                emit(Resource.Error(e.message.toString(), exception = e))
             }
-        } catch (e: Exception) {
-            emit(Resource.Error(e.message.toString(), exception = e))
         }
-    }
 
-    fun joinGroupChat(keyBarcode: String, username: String): Flow<Resource<GroupChat?>> = flow {
-        emit(Resource.Loading())
+    fun joinGroupChat(keyBarcode: String, username: String): Flow<Resource<JoinGroupResponse>> =
+        flow {
+            emit(Resource.Loading())
 
-        try {
-            val querySnapshot = groupCollection.whereEqualTo("key", keyBarcode).get().await()
+            try {
+                val memberUsername = username.trim()
+                val data = JoinGroupResponse(
+                    status = JoinGroupStatus.GROUP_NOT_FOUND,
+                    groupChat = null
+                )
+                val querySnapshot =
+                    groupCollection.whereEqualTo("key", keyBarcode)
+                        .limit(1)
+                        .get()
+                        .await()
 
-//            if (querySnapshot.isEmpty) {
-//                emit(Resource.Success(null))
-//            } else {
-//                val groupDoc = querySnapshot.documents[0]
-//                val groupId = groupDoc.id
-//
-//                val membersRef = getMemberCollection(groupId)
-//                val membersSnapshot = membersRef.get().await()
-//
-//                if (membersSnapshot.documents.any { it.id == getSessionID() }) {
-//                    emit(Resource.Success(null))
-//                } else {
-//                    val member = MemberEntity(
-//                        username = username.trim(),
-//                        isAdmin = false,
-//                        isCreator = false,
-//                        joinedAt = getNowTimestampString())
-//                }
-//            }
-        } catch (e: Exception) {
-            emit(Resource.Error(e.message.toString(), exception = e))
+                // Group chat is empty
+                if (querySnapshot.isEmpty) {
+                    emit(Resource.Success(data))
+                } else {
+                    val groupDoc = querySnapshot.documents[0]
+                    val groupId = groupDoc.id
+
+                    val membersRef = getMemberCollection(groupId)
+                    val membersSnapshot =
+                        membersRef.whereEqualTo("username", memberUsername)
+                            .get()
+                            .await()
+
+                    // Username available
+                    if (membersSnapshot.isEmpty) {
+                        val groupDocRef = groupCollection.document(groupId)
+                        val member = MemberDocument(
+                            username = memberUsername,
+                            isAdmin = false,
+                            isCreator = false,
+                            joinedAt = getNowTimestampString()
+                        )
+
+                        membersRef.add(member)
+                            .await()
+                        groupDocRef.update("memberIds", FieldValue.arrayUnion(getSessionID()))
+                            .await()
+                        val membersSnapshot = membersRef.get().await()
+                        val groupData = groupDocRef.get()
+                            .await()
+                            .toObject(GroupChatDocument::class.java)!!
+
+                        val groupChat = GroupChat(
+                            id = groupId,
+                            key = groupData.key,
+                            name = groupData.name,
+                            members = membersSnapshot.documents.map {
+                                val memberDocument = it.toObject(MemberDocument::class.java)!!
+                                memberDocument.toMember(it.id)
+                            },
+                            createdAt = groupData.createdAt,
+                            updatedAt = groupData.updatedAt,
+                        )
+
+                        emit(
+                            Resource.Success(
+                                data.copy(
+                                    status = JoinGroupStatus.SUCCESS,
+                                    groupChat = groupChat
+                                )
+                            )
+                        )
+                    } else { // Username not available
+                        emit(
+                            Resource.Success(
+                                data.copy(
+                                    status = JoinGroupStatus.USERNAME_NOT_AVAILABLE
+                                )
+                            )
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                emit(Resource.Error(e.message.toString(), exception = e))
+            }
         }
-    }
 }

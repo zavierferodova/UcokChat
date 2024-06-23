@@ -3,6 +3,7 @@ package com.robbies.ucokchat
 import android.app.Application
 import com.robbies.ucokchat.di.firebaseDatabaseModule
 import com.robbies.ucokchat.di.repositoryModule
+import com.robbies.ucokchat.di.sessionModule
 import com.robbies.ucokchat.di.viewModelModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -17,6 +18,7 @@ class MyApplication : Application() {
             androidLogger(Level.NONE)
             androidContext(this@MyApplication)
             modules(
+                sessionModule,
                 firebaseDatabaseModule,
                 repositoryModule,
                 viewModelModule,

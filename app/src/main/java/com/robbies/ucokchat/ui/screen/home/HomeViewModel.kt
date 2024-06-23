@@ -17,7 +17,7 @@ class HomeViewModel(private val repository: GroupChatRepository) : ViewModel() {
 
     init {
         viewModelScope.launch {
-            repository.listenSessionGroupChat().collect {
+            repository.listenGroupChats().collect {
                 when (it) {
                     is Resource.Success -> {
                         showLoadingGroupChat(false)

@@ -1,6 +1,5 @@
 package com.robbies.ucokchat.ui.screen.join
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
@@ -21,7 +20,7 @@ class JoinGroupViewModel(private val groupChatRepository: GroupChatRepository) :
     val uiState: StateFlow<JoinGroupUIState> = _uiState
     fun checkGroupAvailability(keyBarcode: String) {
         viewModelScope.launch {
-            groupChatRepository.checkGroupAvailability(keyBarcode).collect {
+            groupChatRepository.checkGroupChatAvailability(keyBarcode).collect {
                 when (it) {
                     is Resource.Error -> {
                         allowScanningBarcode(true)

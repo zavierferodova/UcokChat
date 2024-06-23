@@ -1,9 +1,9 @@
 package com.robbies.ucokchat.data
 
 import android.content.Context
-import android.util.Log
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.robbies.ucokchat.data.document.GroupChatDocument
@@ -16,6 +16,7 @@ import com.robbies.ucokchat.data.response.GroupAvailabilityStatus
 import com.robbies.ucokchat.data.response.JoinGroupResponse
 import com.robbies.ucokchat.data.response.JoinGroupStatus
 import com.robbies.ucokchat.model.GroupChat
+import com.robbies.ucokchat.model.Message
 import com.robbies.ucokchat.util.getNowTimestampString
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -32,6 +33,9 @@ class GroupChatRepository(
     private val context: Context
 ) : FirebaseRepository(database, context) {
     private val groupCollection = database.collection("groups")
+    private var groupChatListener: ListenerRegistration? = null
+    private var groupChatsListener: ListenerRegistration? = null
+    private var groupMessageListener: ListenerRegistration? = null
 
     private fun getMemberCollection(groupId: String) =
         groupCollection.document(groupId).collection("members")
@@ -77,12 +81,52 @@ class GroupChatRepository(
         }
     }
 
-    fun listenSessionGroupChat(): Flow<Resource<List<GroupChat>>> = callbackFlow {
+    fun listenGroupChat(groupId: String): Flow<Resource<GroupChat>> = callbackFlow {
+        groupChatListener?.remove()
+        trySend(Resource.Loading())
+
+        val querySnapshot = groupCollection.document(groupId)
+        groupChatListener = querySnapshot.addSnapshotListener { snapshots, e ->
+            if (e != null) {
+                return@addSnapshotListener
+            }
+
+            if (snapshots != null) {
+                launch {
+                    try {
+                        val groupData = snapshots.toObject(GroupChatDocument::class.java)!!
+                        val membersRef = getMemberCollection(groupId).get().await()
+                        val groupChat = GroupChat(
+                            id = groupId,
+                            key = groupData.key,
+                            name = groupData.name,
+                            members = membersRef.documents.map {
+                                val memberData = it.toObject(MemberDocument::class.java)!!
+                                memberData.toMember(it.id)
+                            },
+                            createdAt = groupData.createdAt,
+                            updatedAt = groupData.updatedAt,
+                        )
+                        trySend(Resource.Success(groupChat))
+                    } catch (e: Exception) {
+                        trySend(Resource.Error(e.message.toString(), exception = e))
+                    }
+                }
+            }
+        }
+
+        awaitClose {
+            groupChatListener?.remove()
+        }
+    }
+
+    fun listenGroupChats(): Flow<Resource<List<GroupChat>>> = callbackFlow {
+        groupChatsListener?.remove()
         trySend(Resource.Loading())
 
         val querySnapshot = groupCollection.whereArrayContains("memberIds", getSessionID())
             .orderBy("lastMessageTimestamp", Query.Direction.DESCENDING)
-        val listenerRegistration =
+        groupChatsListener =
             querySnapshot.addSnapshotListener(MetadataChanges.INCLUDE) { snapshots, e ->
                 if (e != null) {
                     return@addSnapshotListener
@@ -154,11 +198,11 @@ class GroupChatRepository(
             }
 
         awaitClose {
-            listenerRegistration.remove()
+            groupChatsListener?.remove()
         }
     }
 
-    fun checkGroupAvailability(keyBarcode: String): Flow<Resource<GroupAvailabilityResponse>> =
+    fun checkGroupChatAvailability(keyBarcode: String): Flow<Resource<GroupAvailabilityResponse>> =
         flow {
             emit(Resource.Loading())
 
@@ -255,7 +299,8 @@ class GroupChatRepository(
                             joinedAt = getNowTimestampString()
                         )
 
-                        membersRef.add(member)
+                        membersRef.document(getSessionID())
+                            .set(member)
                             .await()
                         groupDocRef.update("memberIds", FieldValue.arrayUnion(getSessionID()))
                             .await()
@@ -298,4 +343,55 @@ class GroupChatRepository(
                 emit(Resource.Error(e.message.toString(), exception = e))
             }
         }
+
+    fun sendMessage(groupId: String, message: String): Flow<Resource<Boolean>> = flow {
+        emit(Resource.Loading())
+
+        try {
+            val groupDoc = groupCollection.document(groupId)
+            val messageCollection = getMessagesCollection(groupId)
+            val creationTimestamp = getNowTimestampString()
+
+            messageCollection.add(
+                MessageDocument(
+                    text = message,
+                    sender = getSessionID(),
+                    timestamp = creationTimestamp
+                )
+            ).await()
+            groupDoc.update("lastMessageTimestamp", creationTimestamp).await()
+            emit(Resource.Success(true))
+        } catch (e: Exception) {
+            emit(Resource.Error(e.message.toString(), exception = e))
+        }
+    }
+
+    fun listenGroupChatMessages(groupId: String): Flow<Resource<List<Message>>> = callbackFlow {
+        groupMessageListener?.remove()
+
+        val querySnapshot =
+            getMessagesCollection(groupId).orderBy("timestamp", Query.Direction.DESCENDING)
+        groupMessageListener = querySnapshot.addSnapshotListener { snapshots, e ->
+            if (e != null) {
+                return@addSnapshotListener
+            }
+
+            if (snapshots != null) {
+                launch {
+                    try {
+                        val messages = snapshots.documents.map {
+                            it.toObject(MessageDocument::class.java)!!.toMessage(it.id)
+                        }
+                        trySend(Resource.Success(messages))
+                    } catch (e: Exception) {
+                        trySend(Resource.Error(e.message.toString(), exception = e))
+                    }
+                }
+            }
+        }
+
+        awaitClose {
+            groupMessageListener?.remove()
+        }
+    }
 }

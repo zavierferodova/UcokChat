@@ -1,12 +1,14 @@
 package com.robbies.ucokchat.ui.screen.groupchat
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,8 +37,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -54,15 +58,29 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.robbies.ucokchat.R
 import com.robbies.ucokchat.controller.RouteActions
-import com.robbies.ucokchat.model.ChatMessage
 import com.robbies.ucokchat.model.GroupChat
+import com.robbies.ucokchat.model.Member
+import com.robbies.ucokchat.model.Message
+import com.robbies.ucokchat.util.Session
+import com.robbies.ucokchat.util.translateChatAnnouncement
+import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(navController: NavController, groupChat: GroupChat) {
-    val messages = remember { mutableStateListOf<ChatMessage>() }
+fun ChatScreen(
+    navController: NavController,
+    groupChat: GroupChat,
+    viewModel: ChatViewModel = koinViewModel()
+) {
+    val groupChatViewModelData by viewModel.groupChat.collectAsState()
+    val messages by viewModel.message.collectAsState()
     var currentMessage by remember { mutableStateOf(TextFieldValue()) }
+    val groupChatData = groupChatViewModelData ?: groupChat
+
+    viewModel.listenGroupData(groupChatData.id)
+    viewModel.listenMessages(groupChatData.id)
 
     Scaffold(
         topBar = {
@@ -108,13 +126,13 @@ fun ChatScreen(navController: NavController, groupChat: GroupChat) {
                                     end = 15.dp
                                 )
                                 .clickable {
-                                    navController.navigate(RouteActions.detailGroup(groupChat))
+                                    navController.navigate(RouteActions.detailGroup(groupChatData))
                                 }
                                 .padding(start = 5.dp),
                             verticalArrangement = Arrangement.Center
                         ) {
                             Text(
-                                text = groupChat.name,
+                                text = groupChatData.name,
                                 color = Color.White,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 18.sp,
@@ -122,7 +140,7 @@ fun ChatScreen(navController: NavController, groupChat: GroupChat) {
                                 modifier = Modifier.wrapContentSize(unbounded = true)
                             )
                             Text(
-                                text = groupChat.members.fold("") { acc, member ->
+                                text = groupChatData.members.fold("") { acc, member ->
                                     "$acc ${member.username}"
                                 },
                                 maxLines = 1,
@@ -147,10 +165,11 @@ fun ChatScreen(navController: NavController, groupChat: GroupChat) {
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .padding(it)
+                        .padding(it),
+                    reverseLayout = true
                 ) {
                     items(messages) { message ->
-                        ChatMessageItem(message = message)
+                        ChatMessageItem(message = message, groupChatData.members)
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -187,14 +206,7 @@ fun ChatScreen(navController: NavController, groupChat: GroupChat) {
                     IconButton(
                         onClick = {
                             if (currentMessage.text.isNotEmpty()) {
-                                messages.add(
-                                    ChatMessage(
-                                        sender = "You",
-                                        message = currentMessage.text,
-                                        timestamp = "Now",
-                                        isSentByCurrentUser = true
-                                    )
-                                )
+                                viewModel.sendMessage(groupChatData.id, currentMessage.text)
                                 currentMessage = TextFieldValue()
                             }
                         }, modifier = Modifier
@@ -216,43 +228,101 @@ fun ChatScreen(navController: NavController, groupChat: GroupChat) {
 }
 
 @Composable
-fun ChatMessageItem(message: ChatMessage) {
-    Column(
-        horizontalAlignment = if (message.isSentByCurrentUser) Alignment.End else Alignment.Start,
-        modifier = Modifier
-            .fillMaxWidth()
-    ) {
-        Text(
-            text = message.sender,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
-            modifier = Modifier.padding(bottom = 5.dp)
-        )
-        Box(
-            modifier = Modifier
-                .background(
-                    if (message.isSentByCurrentUser) Color(0xFFDCF8C6) else Color(0xFFFFFFFF),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .padding(
-                    horizontal = 15.dp,
-                    vertical = 10.dp
-                )
-        ) {
-            Column {
+fun ChatMessageItem(message: Message, members: List<Member>) {
+    val session: Session = koinInject()
+    val isSystemMessage = message.systemAnnouncement
+    val isSentByCurrentUser = message.sender == session.getSessionID()
+
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val density = LocalDensity.current
+        val maxWidth = constraints.maxWidth
+        val fraction = 0.75f
+        val calculatedWidth = (maxWidth * fraction / density.density).dp
+
+        Log.d("ChatScreen", "Max Width: $maxWidth")
+        Log.d("ChatScreen", "Fraction: $fraction")
+        Log.d("ChatScreen", "Calculated Width: $calculatedWidth")
+
+        if (isSystemMessage != true) {
+            Column(
+                Modifier.fillMaxWidth(),
+                horizontalAlignment = if (isSentByCurrentUser)
+                    Alignment.End
+                else
+                    Alignment.Start,
+            ) {
                 Text(
-                    text = message.message,
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(bottom = 5.dp)
+                    text = members.firstOrNull() {
+                        it.id == message.sender
+                    }?.username ?: "Unknown",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .widthIn(min = 0.dp, max = calculatedWidth)
+                        .padding(bottom = 5.dp)
                 )
-                Text(
-                    text = message.timestamp,
-                    fontSize = 10.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.align(Alignment.End)
+                Column(
+                    modifier = Modifier
+                        .widthIn(min = 0.dp, max = calculatedWidth)
+                        .background(
+                            if (isSentByCurrentUser)
+                                Color(0xFFDCF8C6)
+                            else
+                                Color(0xFFFFFFFF),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(
+                            horizontal = 15.dp,
+                            vertical = 10.dp
+                        )
+                ) {
+                    Text(
+                        text = message.text,
+                        fontSize = 16.sp,
+                        modifier = Modifier.padding(bottom = 5.dp)
+                    )
+                    Text(
+                        text = message.timestamp,
+                        fontSize = 10.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.align(Alignment.End)
+                    )
+                }
+                Spacer(
+                    modifier = Modifier
+                        .widthIn(min = 0.dp, max = calculatedWidth)
+                        .height(10.dp)
+                )
+            }
+        } else {
+            Column(
+                Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .widthIn(min = 0.dp, max = calculatedWidth)
+                        .background(
+                            Color(0xFF8CDAF3),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(
+                            horizontal = 15.dp,
+                            vertical = 10.dp
+                        )
+                ) {
+                    Text(
+                        text = translateChatAnnouncement(message.text),
+                        fontSize = 16.sp,
+                        modifier = Modifier.padding(bottom = 5.dp)
+                    )
+                }
+                Spacer(
+                    modifier = Modifier
+                        .widthIn(min = 0.dp, max = calculatedWidth)
+                        .height(10.dp)
                 )
             }
         }
-        Spacer(modifier = Modifier.height(10.dp))
     }
 }

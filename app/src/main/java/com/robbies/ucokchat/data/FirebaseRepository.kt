@@ -4,34 +4,28 @@ import android.annotation.SuppressLint
 import android.content.Context
 import com.google.firebase.firestore.FirebaseFirestore
 import com.robbies.ucokchat.data.document.SessionDocument
-import com.robbies.ucokchat.util.SecureSharedPrefs
+import com.robbies.ucokchat.util.Session
 import com.robbies.ucokchat.util.getNowTimestampString
-import java.util.UUID
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 open class FirebaseRepository(
     private val database: FirebaseFirestore,
     private val context: Context
-) {
-    private val sharedPreferences = SecureSharedPrefs.getSharedPreferences(context)
-    private val sessionPrefKey = "session"
+): KoinComponent {
+    private val session: Session by inject()
 
     init {
         initSessionID()
     }
 
     private fun initSessionID() {
-        val session = getSessionID()
-        if (session.isEmpty()) {
-            val newSessionId = UUID.randomUUID().toString()
-            sharedPreferences.edit().putString(sessionPrefKey, newSessionId).apply()
-        }
-
+        session.initSessionID()
         createFirebaseSession()
     }
 
-    public fun getSessionID(): String {
-        val result = sharedPreferences.getString(sessionPrefKey, "")
-        return if (!result.isNullOrEmpty()) result else ""
+    fun getSessionID(): String {
+        return session.getSessionID()
     }
 
     private fun getFirebaseSession(callback: RepositoryCallback<SessionDocument?>) {

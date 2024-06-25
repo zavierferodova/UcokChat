@@ -1,7 +1,6 @@
 package com.robbies.ucokchat.ui.screen.groupchat
 
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -238,10 +237,6 @@ fun ChatMessageItem(message: Message, members: List<Member>) {
         val maxWidth = constraints.maxWidth
         val fraction = 0.75f
         val calculatedWidth = (maxWidth * fraction / density.density).dp
-
-        Log.d("ChatScreen", "Max Width: $maxWidth")
-        Log.d("ChatScreen", "Fraction: $fraction")
-        Log.d("ChatScreen", "Calculated Width: $calculatedWidth")
 
         if (isSystemMessage != true) {
             Column(

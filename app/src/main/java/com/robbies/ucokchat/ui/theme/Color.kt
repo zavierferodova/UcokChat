@@ -17,3 +17,7 @@ val blue80 = Color(0xFF1976D2)
 val aqua40 = Color(0xFF00BCD4)
 val aquaGrey40 = Color(0xFF26A69A)
 val blue40 = Color(0xFF0D47A1)
+
+val green80 = Color(0xFF2F775E)
+val greenGrey80 = Color(0xFF004D40)
+val lightGreen80 = Color(0xFF81C784)

@@ -1,0 +1,35 @@
+{
+    "sessions": {
+        "{{sessionId}}": {
+            "createdAt": "String",
+            "updatedAt": "String"
+        }
+    },
+    "groups": {
+        "{{groupId}}": {
+            "key": "UUID",
+            "name": "String",
+            "lastMessageTimestamp": "String",
+            "createdAt": "String",
+            "updatedAt": "String",
+            "memberIds": "List<String> / List<{{memberId}}>",
+            "members": {
+                "{{memberId}}": {
+                    "username": "String",
+                    "isAdmin": "Boolean",
+                    "isCreator": "Boolean?",
+                    "joinedAt": "String",
+                    "leave": "Boolean"
+                }
+            },
+            "messages": {
+                "{{messageId}}": {
+                    "text": "String",
+                    "sender": "{{memberId}}",
+                    "systemAnnouncement": "Boolean?",
+                    "timestamp": "String"
+                }
+            }
+        }
+    }
+}

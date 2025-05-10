@@ -6,7 +6,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 
 object SecureSharedPrefs {
-    private const val PREFS_FILE_NAME = "secure_prefs"
+    private const val PREFS_FILE_NAME = "secure_shared_prefs"
 
     fun getSharedPreferences(context: Context): SharedPreferences {
         val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)

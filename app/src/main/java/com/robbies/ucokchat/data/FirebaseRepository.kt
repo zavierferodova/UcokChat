@@ -2,6 +2,7 @@ package com.robbies.ucokchat.data
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.robbies.ucokchat.data.document.SessionDocument
 import com.robbies.ucokchat.util.Session

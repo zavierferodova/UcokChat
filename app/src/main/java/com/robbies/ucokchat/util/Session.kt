@@ -2,6 +2,7 @@ package com.robbies.ucokchat.util
 
 import android.content.Context
 import java.util.UUID
+import androidx.core.content.edit
 
 class Session(context: Context) {
     private val sharedPreferences = SecureSharedPrefs.getSharedPreferences(context)
@@ -11,7 +12,7 @@ class Session(context: Context) {
         val session = getSessionID()
         if (session.isEmpty()) {
             val newSessionId = UUID.randomUUID().toString()
-            sharedPreferences.edit().putString(sessionPrefKey, newSessionId).apply()
+            sharedPreferences.edit { putString(sessionPrefKey, newSessionId) }
         }
     }
 
